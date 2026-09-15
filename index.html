@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MC_PLAYER - Minecraft & Discord Developer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #a855f7;
+            --secondary: #ec4899;
+            --dark: #0f0f1e;
+            --darker: #050510;
+            --glass: rgba(255, 255, 255, 0.1);
+            --border: rgba(168, 85, 247, 0.3);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--darker) 0%, #1a0f2e 50%, var(--dark) 100%);
+            color: #e0e0e0;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated background particles */
+        .particle-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            background: radial-gradient(circle, rgba(168, 85, 247, 0.8) 0%, transparent 70%);
+            border-radius: 50%;
+            opacity: 0.1;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) translateX(0px); }
+            25% { transform: translateY(-50px) translateX(50px); }
+            50% { transform: translateY(-100px) translateX(-50px); }
+            75% { transform: translateY(-50px) translateX(100px); }
+        }
+
+        /* Grid background */
+        .grid-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(168, 85, 247, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(168, 85, 247, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* Navbar */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 15, 30, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            box-shadow: 0 8px 32px rgba(168, 85, 247, 0.1);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+            letter-spacing: 2px;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: #e0e0e0;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            font-weight: 500;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--primary);
+            background: rgba(168, 85, 247, 0.1);
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.3);
+        }
+
+        .mobile-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        /* Main content */
+        main {
+            margin-top: 60px;
+        }
+
+        section {
+            padding: 80px 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            scroll-behavior: smooth;
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 100px;
+            gap: 4rem;
+        }
+
+        .hero-content {
+            flex: 1;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 8vw, 4.5rem);
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+            text-shadow: 0 0 30px rgba(168, 85, 247, 0.3);
+        }
+
+        .hero .subtitle {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            color: #b0b0b0;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+            max-width: 600px;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 3rem;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: 2px solid var(--primary);
+            background: rgba(168, 85, 247, 0.1);
+            color: var(--primary);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn:hover {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 0 30px rgba(168, 85, 247, 0.6);
+            transform: translateY(-3px);
+        }
+
+        .btn-secondary {
+            border-color: var(--secondary);
+            color: var(--secondary);
+            background: rgba(236, 72, 153, 0.1);
+        }
+
+        .btn-secondary:hover {
+            background: var(--secondary);
+            box-shadow: 0 0 30px rgba(236, 72, 153, 0.6);
+        }
+
+        /* Hero Avatar */
+        .hero-avatar {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 1000px;
+        }
+
+        .avatar-box {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(236, 72, 153, 0.2));
+            border: 2px solid var(--border);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 50px rgba(168, 85, 247, 0.3),
+                        inset 0 0 30px rgba(168, 85, 247, 0.1);
+            animation: float-avatar 6s ease-in-out infinite;
+            font-size: 6rem;
+        }
+
+        @keyframes float-avatar {
+            0%, 100% { transform: translateY(0px) rotateZ(0deg); }
+            50% { transform: translateY(-20px) rotateZ(2deg); }
+        }
+
+        /* Section headers */
+        h2 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            margin-bottom: 3rem;
+            text-align: center;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Support Section */
+        .support-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .support-card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            padding: 2rem;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            animation: slideInUp 0.6s ease forwards;
+            opacity: 0;
+        }
+
+        .support-card:nth-child(1) { animation-delay: 0.1s; }
+        .support-card:nth-child(2) { animation-delay: 0.2s; }
+        .support-card:nth-child(3) { animation-delay: 0.3s; }
+        .support-card:nth-child(4) { animation-delay: 0.4s; }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .support-card:hover {
+            background: rgba(168, 85, 247, 0.15);
+            border-color: var(--primary);
+            box-shadow: 0 0 30px rgba(168, 85, 247, 0.4),
+                        inset 0 0 30px rgba(168, 85, 247, 0.05);
+            transform: translateY(-10px);
+        }
+
+        .support-card h3 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .support-card p {
+            color: #a0a0a0;
+            line-height: 1.6;
+        }
+
+        /* Projects Grid */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .project-card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            padding: 2.5rem;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+            transition: all 0.3s ease;
+            animation: slideInUp 0.6s ease forwards;
+            opacity: 0;
+        }
+
+        .project-card:nth-child(1) { animation-delay: 0.1s; }
+        .project-card:nth-child(2) { animation-delay: 0.2s; }
+        .project-card:nth-child(3) { animation-delay: 0.3s; }
+        .project-card:nth-child(4) { animation-delay: 0.4s; }
+
+        .project-card:hover {
+            background: rgba(168, 85, 247, 0.15);
+            border-color: var(--primary);
+            box-shadow: 0 0 40px rgba(168, 85, 247, 0.4),
+                        inset 0 0 30px rgba(168, 85, 247, 0.05);
+            transform: translateY(-15px);
+        }
+
+        .project-card h3 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .project-card p {
+            color: #a0a0a0;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        .project-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        /* Experience Section */
+        .experience-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .experience-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-bottom: 4rem;
+            text-align: center;
+        }
+
+        .stat-box {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            padding: 2rem;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #a0a0a0;
+            font-size: 0.95rem;
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding: 2rem 0;
+        }
+
+        .timeline-group {
+            margin-bottom: 3rem;
+        }
+
+        .timeline-title {
+            color: var(--primary);
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .timeline-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .timeline-item {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .timeline-item:hover {
+            background: rgba(168, 85, 247, 0.15);
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+            transform: translateY(-5px);
+        }
+
+        .timeline-item-title {
+            color: var(--secondary);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .timeline-item-role {
+            color: #a0a0a0;
+            font-size: 0.9rem;
+        }
+
+        /* Skills Section */
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1.5rem;
+            margin-top: 3rem;
+        }
+
+        .skill-badge {
+            background: var(--glass);
+            border: 2px solid var(--border);
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 600;
+            color: var(--primary);
+            transition: all 0.3s ease;
+            cursor: default;
+            backdrop-filter: blur(10px);
+        }
+
+        .skill-badge:hover {
+            background: rgba(168, 85, 247, 0.2);
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+            transform: scale(1.05) translateY(-5px);
+        }
+
+        /* Contact Section */
+        .contact {
+            text-align: center;
+        }
+
+        .contact h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .contact > p {
+            font-size: 1.2rem;
+            color: #a0a0a0;
+            margin-bottom: 3rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .contact-buttons {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* Footer */
+        footer {
+            background: rgba(15, 15, 30, 0.8);
+            border-top: 1px solid var(--border);
+            padding: 2rem;
+            text-align: center;
+            color: #808080;
+            margin-top: 4rem;
+        }
+
+        /* Scroll reveal animations */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            nav {
+                padding: 1rem;
+            }
+
+            .nav-links {
+                position: absolute;
+                top: 60px;
+                left: 0;
+                right: 0;
+                flex-direction: column;
+                background: rgba(15, 15, 30, 0.95);
+                backdrop-filter: blur(10px);
+                border-bottom: 1px solid var(--border);
+                gap: 0;
+                max-height: 0;
+                overflow: hidden;
+                transition: max-height 0.3s ease;
+            }
+
+            .nav-links.active {
+                max-height: 400px;
+            }
+
+            .nav-links a {
+                padding: 1rem;
+                border-radius: 0;
+                display: block;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .mobile-toggle {
+                display: block;
+            }
+
+            .logo {
+                font-size: 1.2rem;
+            }
+
+            .hero {
+                flex-direction: column;
+                padding-top: 80px;
+                min-height: auto;
+                gap: 2rem;
+            }
+
+            .hero-avatar {
+                order: -1;
+            }
+
+            .avatar-box {
+                width: 200px;
+                height: 200px;
+                font-size: 4rem;
+            }
+
+            .hero-buttons {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .btn {
+                width: 100%;
+            }
+
+            section {
+                padding: 50px 1.5rem;
+            }
+
+            .skills-grid {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            }
+
+            .contact-buttons {
+                flex-direction: column;
+            }
+
+            .contact-buttons .btn {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero .subtitle {
+                font-size: 1.1rem;
+            }
+
+            h2 {
+                font-size: 1.8rem;
+            }
+
+            .support-grid,
+            .projects-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .skills-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="particle-bg"></div>
+    <div class="grid-bg"></div>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="logo">MC_PLAYER</div>
+        <button class="mobile-toggle">☰</button>
+        <ul class="nav-links">
+            <li><a href="#home">Home</a></li>
+            <li><a href="#support">Support</a></li>
+            <li><a href="#projects">Projects</a></li>
+            <li><a href="#experience">Experience</a></li>
+            <li><a href="#skills">Skills</a></li>
+            <li><a href="#contact">Contact</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Hero Section -->
+        <section id="home" class="hero">
+            <div class="hero-content">
+                <h1>MC_PLAYER</h1>
+                <div class="subtitle">Minecraft • Discord • Web • WhatsApp • Telegram Developer</div>
+                <p>Minecraft, Discord, Web, WhatsApp & Telegram developer creating powerful bots, servers, websites and custom tools.</p>
+                <div class="hero-buttons">
+                    <a href="https://discord.gg/8GsrmXScDV" class="btn" target="_blank">Discord</a>
+                    <a href="https://youtube.com/@mc_player--ggs" class="btn btn-secondary" target="_blank">YouTube</a>
+                    <a href="mailto:rama8rama8kugan@gmail.com" class="btn">Email</a>
+                </div>
+            </div>
+            <div class="hero-avatar">
+                <div class="avatar-box">⛏️</div>
+            </div>
+        </section>
+
+        <!-- Support Section -->
+        <section id="support">
+            <h2>Support</h2>
+            <div class="support-grid">
+                <div class="support-card reveal">
+                    <h3>Discord Support</h3>
+                    <p>Join the Discord server for questions, project discussions and community support.</p>
+                </div>
+                <div class="support-card reveal">
+                    <h3>Email Support</h3>
+                    <p>For private requests, collaborations and development enquiries.</p>
+                </div>
+                <div class="support-card reveal">
+                    <h3>Intra ID</h3>
+                    <p>Coming Soon.</p>
+                </div>
+                <div class="support-card reveal">
+                    <h3>Quick Response</h3>
+                    <p>Clear communication for server, bot, website and automation projects.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- What I Build Section -->
+        <section id="projects">
+            <h2>What I Build</h2>
+            <div class="projects-grid">
+                <div class="project-card reveal">
+                    <span class="project-icon">🏗️</span>
+                    <h3>Custom Minecraft Systems</h3>
+                    <p>Servers, plugins, configurations and custom gameplay features.</p>
+                </div>
+                <div class="project-card reveal">
+                    <span class="project-icon">🤖</span>
+                    <h3>Discord Bots</h3>
+                    <p>Moderation, utility, automation, tickets and custom community bots.</p>
+                </div>
+                <div class="project-card reveal">
+                    <span class="project-icon">🌐</span>
+                    <h3>Modern Websites</h3>
+                    <p>Responsive portfolio, landing pages and custom web applications.</p>
+                </div>
+                <div class="project-card reveal">
+                    <span class="project-icon">📱</span>
+                    <h3>WhatsApp & Telegram Automation</h3>
+                    <p>Custom automation and bot solutions for messaging platforms.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Experience Section -->
+        <section id="experience">
+            <h2>Experience</h2>
+            <div class="experience-header">
+                <div class="experience-stats">
+                    <div class="stat-box reveal">
+                        <div class="stat-number">3+</div>
+                        <div class="stat-label">Years Experience</div>
+                    </div>
+                    <div class="stat-box reveal">
+                        <div class="stat-number">15+</div>
+                        <div class="stat-label">Server Projects & Collaborations</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="timeline">
+                <div class="timeline-group">
+                    <div class="timeline-title">Completed Projects</div>
+                    <div class="timeline-items">
+                        <div class="timeline-item reveal">
+                            <div class="timeline-item-title">Tamilnadu SMP</div>
+                            <div class="timeline-item-role">Owner</div>
+                        </div>
+                        <div class="timeline-item reveal">
+                            <div class="timeline-item-title">Saro SMP</div>
+                            <div class="timeline-item-role">Dev</div>
+                        </div>
+                        <div class="timeline-item reveal">
+                            <div class="timeline-item-title">Yamalogam</div>
+                            <div class="timeline-item-role">Dev + Admin</div>
+                        </div>
+                        <div class="timeline-item reveal">
+                            <div class="timeline-item-title">Mazhaicraft</div>
+                            <div class="timeline-item-role">Dev</div>
+                        </div>
+                        <div class="timeline-item reveal">
+                            <div class="timeline-item-title">BF Joker</div>
+                            <div class="timeline-item-role">Dev</div>
+                        </div>
+                        <div class="timeline-item reveal">
+                            <div class="timeline-item-title">Venki YouTuber</div>
+                            <div class="timeline-item-role">Dev</div>
+                        </div>
+                        <div class="timeline-item reveal">
+                            <div class="timeline-item-title">Bamboo SMP</div>
+                            <div class="timeline-item-role">Dev</div>
+                        </div>
+                        <div class="timeline-item reveal">
+                            <div class="timeline-item-title">Storm MC</div>
+                            <div class="timeline-item-role">Dev</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="timeline-group">
+                    <div class="timeline-title">Current / Collaboration Projects</div>
+                    <div class="timeline-items">
+                        <div class="timeline-item reveal">
+                            <div class="timeline-item-title">Zencraft</div>
+                            <div class="timeline-item-role">Owner</div>
+                        </div>
+                        <div class="timeline-item reveal">
+                            <div class="timeline-item-title">Primecraft</div>
+                            <div class="timeline-item-role">Dev</div>
+                        </div>
+                        <div class="timeline-item reveal">
+                            <div class="timeline-item-title">ZEN × PRIME</div>
+                            <div class="timeline-item-role">Dev</div>
+                        </div>
+                        <div class="timeline-item reveal">
+                            <div class="timeline-item-title">Pyre</div>
+                            <div class="timeline-item-role">Mod Dev</div>
+                        </div>
+                        <div class="timeline-item reveal">
+                            <div class="timeline-item-title">Tamilgolri</div>
+                            <div class="timeline-item-role">Dev</div>
+                        </div>
+                        <div class="timeline-item reveal">
+                            <div class="timeline-item-title">Pyre × Tamilgolri</div>
+                            <div class="timeline-item-role">Dev</div>
+                        </div>
+                        <div class="timeline-item reveal">
+                            <div class="timeline-item-title">Pulikesi YT</div>
+                            <div class="timeline-item-role">Dev</div>
+                        </div>
+                        <div class="timeline-item reveal">
+                            <div class="timeline-item-title">Fuga</div>
+                            <div class="timeline-item-role">Dev</div>
+                        </div>
+                        <div class="timeline-item reveal">
+                            <div class="timeline-item-title">Pyrix</div>
+                            <div class="timeline-item-role">Mod + Admin</div>
+                        </div>
+                        <div class="timeline-item reveal">
+                            <div class="timeline-item-title">Falcon</div>
+                            <div class="timeline-item-role">Co-Owner</div>
+                        </div>
+                        <div class="timeline-item reveal">
+                            <div class="timeline-item-title">Luck</div>
+                            <div class="timeline-item-role">Co-Owner</div>
+                        </div>
+                        <div class="timeline-item reveal">
+                            <div class="timeline-item-title">Other Projects</div>
+                            <div class="timeline-item-role">Various</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Skills Section -->
+        <section id="skills">
+            <h2>Skills</h2>
+            <div class="skills-grid">
+                <div class="skill-badge reveal">Java</div>
+                <div class="skill-badge reveal">C++</div>
+                <div class="skill-badge reveal">Python</div>
+                <div class="skill-badge reveal">JavaScript</div>
+                <div class="skill-badge reveal">HTML/CSS</div>
+                <div class="skill-badge reveal">Node.js</div>
+                <div class="skill-badge reveal">Databases</div>
+                <div class="skill-badge reveal">GitHub</div>
+                <div class="skill-badge reveal">Discord API</div>
+                <div class="skill-badge reveal">Server Management</div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="contact">
+            <h2>Have an idea?</h2>
+            <p>Got an idea for a Minecraft server, Discord bot, website or automation project? Let's talk.</p>
+            <div class="contact-buttons">
+                <a href="https://discord.gg/8GsrmXScDV" class="btn" target="_blank">Join Discord</a>
+                <a href="mailto:rama8rama8kugan@gmail.com" class="btn btn-secondary">Contact Me</a>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>MC_PLAYER · © 2026 · Minecraft Developer · Discord Developer · Web Developer</p>
+    </footer>
+
+    <script>
+        // Mobile navigation toggle
+        const mobileToggle = document.querySelector('.mobile-toggle');
+        const navLinks = document.querySelector('.nav-links');
+
+        mobileToggle.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+        });
+
+        // Close menu when a link is clicked
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            link.addEventListener('click', () => {
+                navLinks.classList.remove('active');
+            });
+        });
+
+        // Smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Navbar active section effect
+        window.addEventListener('scroll', () => {
+            let current = '';
+            const sections = document.querySelectorAll('section');
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (pageYOffset >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            document.querySelectorAll('.nav-links a').forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.classList.add('active');
+                }
+            });
+        });
+
+        // Scroll reveal animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Create animated particles
+        function createParticles() {
+            const particleBg = document.querySelector('.particle-bg');
+            const particleCount = window.innerWidth > 768 ? 20 : 10;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.width = Math.random() * 100 + 50 + 'px';
+                particle.style.height = particle.style.width;
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 20 + 's';
+                particle.style.animationDuration = (Math.random() * 20 + 20) + 's';
+                particleBg.appendChild(particle);
+            }
+        }
+
+        createParticles();
+
+        // Button hover effects
+        document.querySelectorAll('.btn').forEach(button => {
+            button.addEventListener('mouseenter', (e) => {
+                const rect = e.target.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+            });
+        });
+    </script>
+</body>
+</html>
